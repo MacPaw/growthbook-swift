@@ -21,10 +21,37 @@ public struct GrowthBookModel {
     var isQaMode: Bool = false
     var isEnabled: Bool = true
     var forcedVariations: JSON?
-    var cacheDirectory: CacheDirectory = .applicationSupport
     var stickyBucketService: StickyBucketServiceProtocol?
     var backgroundSync: Bool
     var remoteEval: Bool
+}
+
+struct GrowthBookCacheOptions {
+    let directoryURL: URL
+    let featureCacheFilename: String
+    let savedGroupsCacheFilename: String
+
+    init(directoryURL: URL, featureCacheFilename: String, savedGroupsCacheFilename: String) {
+        self.directoryURL = directoryURL
+        self.featureCacheFilename = featureCacheFilename
+        self.savedGroupsCacheFilename = savedGroupsCacheFilename
+    }
+
+    init(cacheDirectory: CacheDirectory, featureCacheFilename: String, savedGroupsCacheFilename: String) {
+        self.init(
+            directoryURL: cacheDirectory.url,
+            featureCacheFilename: featureCacheFilename,
+            savedGroupsCacheFilename: savedGroupsCacheFilename
+        )
+    }
+
+    func settingDirectoryURL(_ directoryURL: URL) -> Self {
+        .init(
+            directoryURL: directoryURL,
+            featureCacheFilename: featureCacheFilename,
+            savedGroupsCacheFilename: savedGroupsCacheFilename
+        )
+    }
 }
 
 /// GrowthBookBuilder - inItializer for GrowthBook SDK for Apps
@@ -37,6 +64,7 @@ public struct GrowthBookModel {
 
     private var refreshHandler: CacheRefreshHandler?
     private var networkDispatcher: NetworkProtocol = CoreNetworkClient()
+    private var cacheOptions: GrowthBookCacheOptions = .init(cacheDirectory: .applicationSupport, featureCacheFilename: "\(Constants.savedGroupsCache).txt", savedGroupsCacheFilename: "\(Constants.savedGroupsCache).txt")
 
     @objc public init(apiHost: String? = nil, clientKey: String? = nil, encryptionKey: String? = nil, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, refreshHandler: CacheRefreshHandler? = nil, backgroundSync: Bool = false, remoteEval: Bool = false) {
         growthBookBuilderModel = GrowthBookModel(apiHost: apiHost, clientKey: clientKey, encryptionKey: encryptionKey, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
@@ -65,7 +93,7 @@ public struct GrowthBookModel {
         return self
     }
     
-    public func setStickyBucketService(stickyBucketService: StickyBucketServiceProtocol? = StickyBucketService()) -> GrowthBookBuilder {
+    public func setStickyBucketService(stickyBucketService: StickyBucketServiceProtocol? = StickyBucketService(cache: .none)) -> GrowthBookBuilder {
         growthBookBuilderModel.stickyBucketService = stickyBucketService
         return self
     }
@@ -92,9 +120,15 @@ public struct GrowthBookModel {
         growthBookBuilderModel.isEnabled = isEnabled
         return self
     }
-    
+
+    @available(*, deprecated, renamed: "setCacheDirectoryURL", message: "Use setCacheDirectoryURL instead")
     @objc public func setCacheDirectory(_ directory: CacheDirectory) -> GrowthBookBuilder {
-        CachingManager.shared.updateCacheDirectory(directory)
+        setCacheDirectoryURL(directory.url)
+    }
+
+    @objc public func setCacheDirectoryURL(_ directoryURL: URL) -> GrowthBookBuilder {
+        cacheOptions = cacheOptions.settingDirectoryURL(directoryURL)
+        (growthBookBuilderModel.stickyBucketService as? StickyBucketFileStorageCacheInterface)?.updateCacheDirectoryURL(directoryURL)
         return self
     }
 
@@ -112,11 +146,18 @@ public struct GrowthBookModel {
             backgroundSync: growthBookBuilderModel.backgroundSync,
             remoteEval: growthBookBuilderModel.remoteEval
         )
+
+        let cachingManager: GrowthBookSDKCachingManagerInterface = GrowthBookSDKCachingManager.withFileStorage(
+            directoryURL: cacheOptions.directoryURL,
+            featuresCacheFilename: cacheOptions.featureCacheFilename,
+            savedGroupsCacheFilename: cacheOptions.savedGroupsCacheFilename,
+            fileManager: .default
+        )
         if let features = growthBookBuilderModel.features {
-            CachingManager.shared.saveContent(fileName: Constants.featureCache, content: features)
+            try? cachingManager.featuresCache.setEncodedFeaturesRawData(features)
         }
 
-        return GrowthBookSDK(context: gbContext, refreshHandler: refreshHandler, networkDispatcher: networkDispatcher)
+        return GrowthBookSDK(context: gbContext, refreshHandler: refreshHandler, networkDispatcher: networkDispatcher, cachingManager: cachingManager)
     }
 }
 
@@ -133,19 +174,22 @@ public struct GrowthBookModel {
     private var attributeOverrides: JSON = JSON()
     private var savedGroupsValues: JSON?
     private var evalContext: EvalContext? = nil
+    private var cachingManager: GrowthBookSDKCachingManagerInterface
 
     init(context: Context,
          refreshHandler: CacheRefreshHandler? = nil,
          logLevel: Level = .info,
          networkDispatcher: NetworkProtocol = CoreNetworkClient(),
          features: Features? = nil,
-         savedGroups: JSON? = nil) {
+         savedGroups: JSON? = nil,
+         cachingManager: GrowthBookSDKCachingManagerInterface) {
         gbContext = context
         self.refreshHandler = refreshHandler
         self.networkDispatcher = networkDispatcher
         self.savedGroupsValues = savedGroups
+        self.cachingManager = cachingManager
         super.init()
-        self.featureVM = FeaturesViewModel(delegate: self, dataSource: FeaturesDataSource(dispatcher: networkDispatcher))
+        self.featureVM = FeaturesViewModel(delegate: self, dataSource: FeaturesDataSource(dispatcher: networkDispatcher), featuresCache: cachingManager.featuresCache, savedGroupsCache: cachingManager.savedGroupsCache)
         if let features = features {
             gbContext.features = features
         } else {
@@ -180,6 +224,8 @@ public struct GrowthBookModel {
     
     /// This function removes all files and subdirectories within the designated cache directory, which is a specific subdirectory within the app's cache directory.
     @objc public func clearCache() {
+        try? cachingManager.clearCache()
+        try? gbContext.stickyBucketService?.clearCache()
         CachingManager.shared.clearCache()
     }
 

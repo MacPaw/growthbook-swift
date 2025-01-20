@@ -110,3 +110,4 @@ xcuserdata
 
 # macOS
 .DS_Store
+/.swiftpm
