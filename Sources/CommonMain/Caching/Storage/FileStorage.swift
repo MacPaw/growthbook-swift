@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Combine
 
 /// A thread-safe file storage for codable values.
 class FileStorage<Value: Codable> {
@@ -107,3 +106,28 @@ extension FileStorage: DataStorageInterface {
         }
     }
 }
+
+/// A type that defines methods for decoding.
+///
+/// - Note: Declared in Combine, but has higher requirements for iOS, tvOS, and watchOS
+protocol TopLevelDecoder {
+    /// The type this decoder accepts.
+    associatedtype Input
+    /// Decodes an instance of the indicated type.
+    func decode<T>(_ type: T.Type, from: Self.Input) throws -> T where T : Decodable
+}
+
+/// A type that defines methods for encoding.
+///
+/// - Note: Declared in Combine, but has higher requirements for iOS, tvOS, and watchOS
+protocol TopLevelEncoder {
+    /// The type this encoder produces.
+    associatedtype Output
+    /// Encodes an instance of the indicated type.
+    ///
+    /// - Parameter value: The instance to encode.
+    func encode<T>(_ value: T) throws -> Self.Output where T : Encodable
+}
+
+extension JSONDecoder: TopLevelDecoder {}
+extension JSONEncoder: TopLevelEncoder {}
