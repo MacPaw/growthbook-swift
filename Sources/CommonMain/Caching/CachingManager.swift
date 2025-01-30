@@ -1,5 +1,6 @@
 import Foundation
 import CommonCrypto
+import CryptoKit
 
 /// Interface for Caching Layer
 public protocol CachingLayer: AnyObject {
@@ -12,16 +13,8 @@ public protocol CachingLayer: AnyObject {
 public class CachingManager: CachingLayer {
     
     public static let shared = CachingManager()
-    
-    private var cacheDirectory = CacheDirectory.applicationSupport
-    private var customCachePath: String?
-    private var cacheKey: String = ""
-    
-    public func setCacheKey(_ key: String) {
-        self.cacheKey = sha256Hash(key)
-    }
 
-    func sha256Hash(_ input: String) -> String {
+    static func keyHash(_ input: String) -> String {
         guard let data = input.data(using: .utf8) else { return "" }
         var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
         data.withUnsafeBytes {
@@ -29,6 +22,13 @@ public class CachingManager: CachingLayer {
         }
         let key = hash.map { String(format: "%02x", $0) }.joined()
         return String(key.prefix(5))
+    }
+
+    private var cacheDirectoryURL: URL
+    private var cacheKey: String = ""
+
+    init(cacheDirectoryURL: URL = CacheDirectory.applicationSupport.url) {
+        self.cacheDirectoryURL = cacheDirectoryURL
     }
     
     func getData(fileName: String) -> Data? {
@@ -40,9 +40,17 @@ public class CachingManager: CachingLayer {
     }
 
     func updateCacheDirectory(_ directory: CacheDirectory) {
-        cacheDirectory = directory
+        updateCacheDirectoryURL(directory.url)
     }
-    
+
+    func updateCacheDirectoryURL(_ directoryURL: URL) {
+        cacheDirectoryURL = directoryURL
+    }
+
+    public func setCacheKey(_ key: String) {
+        self.cacheKey = Self.keyHash(key)
+    }
+
     /// Save content in cache
     public func saveContent(fileName: String, content: Data) {
         let fileManager = FileManager.default
@@ -85,7 +93,7 @@ public class CachingManager: CachingLayer {
     /// Get Target File Path in internal memory
     func getTargetFile(fileName: String) -> String {
         // Get Documents Directory Path
-        guard let directoryPath = cacheDirectory.path else { return "" }
+        let directoryPath = cacheDirectoryURL.path
         // Append Folder name
         let targetFolderPath = directoryPath + "/GrowthBook-Cache-\(cacheKey)"
 
@@ -107,17 +115,14 @@ public class CachingManager: CachingLayer {
         // Create complete filePath for targetFileName & internal Memory Folder
         return "\(targetFolderPath)/\(file).txt"
     }
-    
+
     /// This function removes all files and subdirectories within the designated cache directory, which is a specific subdirectory within the app's cache directory.
     public func clearCache() {
-        guard let directoryPath = cacheDirectory.path else {
-            logger.error("Failed to retrieve directory path.")
-            return
-        }
-        
+        let directoryPath = cacheDirectoryURL.path
+
         let targetFolderPath = directoryPath + "/GrowthBook-Cache-\(cacheKey)"
         let fileManager = FileManager.default
-        
+
         // Check if folder exists
         if fileManager.fileExists(atPath: targetFolderPath) {
             do {
@@ -132,14 +137,14 @@ public class CachingManager: CachingLayer {
 }
 
 /// This enumeration provides a convenient way to interact with various cache directories, simplifying the process of accessing and managing them using the FileManager API.
-public enum CacheDirectory {
+public enum CacheDirectory: Sendable {
     case applicationSupport
     case caches
     case documents
     case library
     case developerLibrary
     case customPath(String)
-    
+
     /// Converts the enumeration case into the corresponding `FileManager.SearchPathDirectory` value, if applicable.
     var searchPathDirectory: FileManager.SearchPathDirectory? {
         switch self {
@@ -157,7 +162,7 @@ public enum CacheDirectory {
             return nil
         }
     }
-    
+
     /// Retrieves the path to the cache directory represented by the enumeration case.
     var path: String? {
         switch self {
@@ -170,5 +175,9 @@ public enum CacheDirectory {
         case .customPath(let customPath):
             return customPath
         }
+    }
+
+    var url: URL {
+        URL(fileURLWithPath: "\(path ?? "")", isDirectory: true)
     }
 }
