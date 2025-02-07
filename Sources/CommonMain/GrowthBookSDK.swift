@@ -123,7 +123,17 @@ struct GrowthBookCacheOptions {
 
     @available(*, deprecated, renamed: "setCacheDirectoryURL", message: "Use setCacheDirectoryURL instead")
     public func setCacheDirectory(_ directory: CacheDirectory) -> GrowthBookBuilder {
-        setCacheDirectoryURL(directory.url)
+        let cacheDirectorySuffix: String
+        if let clientKey = growthBookBuilderModel.clientKey {
+            let hashedClientKey: String = CachingManager.keyHash(clientKey)
+            cacheDirectorySuffix = "-hashedClientKey"
+        } else {
+            cacheDirectorySuffix = ""
+        }
+
+        let directoryURL: URL = directory.url.appendingPathComponent("GrowthBook-Cache\(cacheDirectorySuffix)", isDirectory: true)
+
+        return setCacheDirectoryURL(directoryURL)
     }
 
     @objc public func setCacheDirectoryURL(_ directoryURL: URL) -> GrowthBookBuilder {
