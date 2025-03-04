@@ -17,12 +17,12 @@ import Foundation
 }
 
 @objc public class MultiUserOptions: NSObject {
-    /// your api host
-    public let apiHost: String?
-    /// unique client key
-    public let clientKey: String?
-    /// Encryption key for encrypted features.
-    public let encryptionKey: String?
+//    /// your api host
+//    public let apiHost: String?
+//    /// unique client key
+//    public let clientKey: String?
+//    /// Encryption key for encrypted features.
+//    public let encryptionKey: String?
     /// Switch to globally disable all experiments. Default true.
     public let isEnabled: Bool
     /// Map of user attributes that are used to assign variations
@@ -41,17 +41,18 @@ import Foundation
     public var stickyBucketAssignmentDocs: [String: StickyAssignmentsDocument]?
     /// Features that uses sticky bucketing
     public var stickyBucketIdentifierAttributes: [String]?
-    /// Enable to use remote evaluation
-    public let remoteEval: Bool
+//    /// Enable to use remote evaluation
+//    public let remoteEval: Bool
     // Keys are unique identifiers for the features and the values are Feature objects.
     // Feature definitions - To be pulled from API / Cache
     var features: Features
 
     public var savedGroups: JSON?
 
-    init(apiHost: String?,
-         clientKey: String?,
-         encryptionKey: String?,
+    init(
+//        apiHost: String?,
+//         clientKey: String?,
+//         encryptionKey: String?,
          isEnabled: Bool,
          attributes: JSON,
          forcedVariations: JSON?,
@@ -62,11 +63,11 @@ import Foundation
          trackingClosure: @escaping (Experiment, ExperimentResult) -> Void,
          features: Features = [:],
          backgroundSync: Bool = false,
-         remoteEval: Bool = false,
+//         remoteEval: Bool = false,
          savedGroups: JSON? = nil) {
-        self.apiHost = apiHost
-        self.clientKey = clientKey
-        self.encryptionKey = encryptionKey
+//        self.apiHost = apiHost
+//        self.clientKey = clientKey
+//        self.encryptionKey = encryptionKey
         self.isEnabled = isEnabled
         self.attributes = attributes
         self.forcedVariations = forcedVariations
@@ -77,33 +78,33 @@ import Foundation
         self.trackingClosure = trackingClosure
         self.features = features
         self.backgroundSync = backgroundSync
-        self.remoteEval = remoteEval
+//        self.remoteEval = remoteEval
         self.savedGroups = savedGroups
     }
 
-    @objc public func getFeaturesURL() -> String? {
-        if let apiHost = apiHost, let clientKey = clientKey {
-            return "\(apiHost)/api/features/\(clientKey)"
-        } else {
-            return nil
-        }
-    }
-
-    @objc public func getRemoteEvalUrl() -> String? {
-        if let apiHost = apiHost, let clientKey = clientKey {
-            return  "\(apiHost)/api/eval/\(clientKey)"
-        } else {
-            return nil
-        }
-    }
-
-    @objc public func getSSEUrl() -> String? {
-        if let apiHost = apiHost, let clientKey = clientKey {
-            return "\(apiHost)/sub/\(clientKey)"
-        } else {
-            return nil
-        }
-    }
+//    @objc public func getFeaturesURL() -> String? {
+//        if let apiHost = apiHost, let clientKey = clientKey {
+//            return "\(apiHost)/api/features/\(clientKey)"
+//        } else {
+//            return nil
+//        }
+//    }
+//
+//    @objc public func getRemoteEvalUrl() -> String? {
+//        if let apiHost = apiHost, let clientKey = clientKey {
+//            return  "\(apiHost)/api/eval/\(clientKey)"
+//        } else {
+//            return nil
+//        }
+//    }
+//
+//    @objc public func getSSEUrl() -> String? {
+//        if let apiHost = apiHost, let clientKey = clientKey {
+//            return "\(apiHost)/sub/\(clientKey)"
+//        } else {
+//            return nil
+//        }
+//    }
 }
 
 @objc public class UserContext: NSObject {

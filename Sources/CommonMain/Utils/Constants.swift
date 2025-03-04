@@ -28,16 +28,28 @@ public struct ParentConditionInterface: Codable {
     }
 }
 
+public struct GrowthBookFeaturesFetchResult: Sendable {
+    public enum FetchType: Sendable, Equatable {
+        case local
+        case initialRemote
+        case remoteForced
+        case remoteRefresh
+    }
+    public let type: FetchType
+    public let error: Error?
+}
+
+
 /// Handler for Refresh Cache Request
 /// 
 /// It updates back whether cache was refreshed or not
-public typealias CacheRefreshHandler = (Bool) -> Void
+public typealias CacheRefreshHandler = @Sendable (GrowthBookFeaturesFetchResult) -> Void
 
 /// Handler for experiment result
-public typealias TrackingCallback = (Experiment, ExperimentResult) -> Void
+public typealias TrackingCallback = @Sendable (Experiment, ExperimentResult) -> Void
 
 /// Handler for subscribed experiment result
-public typealias ExperimentRunCallback = (Experiment, ExperimentResult) -> Void
+public typealias ExperimentRunCallback = @Sendable (Experiment, ExperimentResult) -> Void
 
 /// Triple Tuple for GrowthBook Namespaces
 ///

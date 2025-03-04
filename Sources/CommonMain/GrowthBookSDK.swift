@@ -66,12 +66,12 @@ struct GrowthBookCacheOptions {
     private var networkDispatcher: NetworkProtocol = CoreNetworkClient()
     private var cacheOptions: GrowthBookCacheOptions = .init(cacheDirectory: .applicationSupport, featureCacheFilename: "\(Constants.featureCache).txt", savedGroupsCacheFilename: "\(Constants.savedGroupsCache).txt")
 
-    @objc public init(apiHost: String? = nil, clientKey: String? = nil, encryptionKey: String? = nil, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, refreshHandler: CacheRefreshHandler? = nil, backgroundSync: Bool = false, remoteEval: Bool = false) {
+    public init(apiHost: String? = nil, clientKey: String? = nil, encryptionKey: String? = nil, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, refreshHandler: CacheRefreshHandler? = nil, backgroundSync: Bool = false, remoteEval: Bool = false) {
         growthBookBuilderModel = GrowthBookModel(apiHost: apiHost, clientKey: clientKey, encryptionKey: encryptionKey, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
         self.refreshHandler = refreshHandler
     }
 
-    @objc public init(features: Data, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, refreshHandler: CacheRefreshHandler? = nil, backgroundSync: Bool, remoteEval: Bool = false) {
+    public init(features: Data, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, refreshHandler: CacheRefreshHandler? = nil, backgroundSync: Bool, remoteEval: Bool = false) {
         growthBookBuilderModel = GrowthBookModel(features: features, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
         self.refreshHandler = refreshHandler
     }
@@ -82,13 +82,13 @@ struct GrowthBookCacheOptions {
     }
 
     /// Set Refresh Handler - Will be called when cache is refreshed
-    @objc public func setRefreshHandler(refreshHandler: @escaping CacheRefreshHandler) -> GrowthBookBuilder {
+    public func setRefreshHandler(refreshHandler: @escaping CacheRefreshHandler) -> GrowthBookBuilder {
         self.refreshHandler = refreshHandler
         return self
     }
 
     /// Set Network Client - Network Client for Making API Calls
-    @objc public func setNetworkDispatcher(networkDispatcher: NetworkProtocol) -> GrowthBookBuilder {
+    public func setNetworkDispatcher(networkDispatcher: NetworkProtocol) -> GrowthBookBuilder {
         self.networkDispatcher = networkDispatcher
         return self
     }
@@ -126,7 +126,7 @@ struct GrowthBookCacheOptions {
         let cacheDirectorySuffix: String
         if let clientKey = growthBookBuilderModel.clientKey {
             let hashedClientKey: String = CachingManager.keyHash(clientKey)
-            cacheDirectorySuffix = "-hashedClientKey"
+            cacheDirectorySuffix = "-\(hashedClientKey)"
         } else {
             cacheDirectorySuffix = ""
         }
@@ -144,23 +144,22 @@ struct GrowthBookCacheOptions {
 
     @objc public func initializer() -> GrowthBookSDK {
         let gbContext = Context(
-            apiHost: growthBookBuilderModel.apiHost,
-            clientKey: growthBookBuilderModel.clientKey,
-            encryptionKey: growthBookBuilderModel.encryptionKey,
+//            apiHost: growthBookBuilderModel.apiHost,
+//            clientKey: growthBookBuilderModel.clientKey,
+//            encryptionKey: growthBookBuilderModel.encryptionKey,
             isEnabled: growthBookBuilderModel.isEnabled,
             attributes: growthBookBuilderModel.attributes,
             forcedVariations: growthBookBuilderModel.forcedVariations,
             stickyBucketService: growthBookBuilderModel.stickyBucketService,
             isQaMode: growthBookBuilderModel.isQaMode,
             trackingClosure: growthBookBuilderModel.trackingClosure,
-            backgroundSync: growthBookBuilderModel.backgroundSync,
-            remoteEval: growthBookBuilderModel.remoteEval
+//            backgroundSync: growthBookBuilderModel.backgroundSync,
+//            remoteEval: growthBookBuilderModel.remoteEval
         )
         
 
         let cacheDirectoryURL: URL
         if let clientKey = growthBookBuilderModel.clientKey {
-            let lastPathComponent: String = cacheOptions.directoryURL.lastPathComponent
             let hashedClientKey: String = CachingManager.keyHash(clientKey)
             cacheDirectoryURL = cacheOptions.directoryURL
                 .appendingPathComponent("\(hashedClientKey)")
@@ -185,55 +184,94 @@ struct GrowthBookCacheOptions {
             try? cachingManager.featuresCache.setEncodedFeaturesRawData(features)
         }
 
-        return GrowthBookSDK(context: gbContext, refreshHandler: refreshHandler, networkDispatcher: networkDispatcher, cachingManager: cachingManager)
+        // TODO: payload type
+        // TODO: Refresh policy
+
+        let instance: GrowthBookInstance = .init(
+            apiHostURL: URL(string: growthBookBuilderModel.apiHost!)!,
+            clientKey: growthBookBuilderModel.clientKey!,
+            payloadType: .plainText,
+            refreshPolicy: .respectfulPolling(interval: 60.0)
+        )
+
+        return GrowthBookSDK(instance: instance, context: gbContext, refreshHandler: refreshHandler, networkDispatcher: networkDispatcher, cachingManager: cachingManager)
     }
 }
 
 /// The main export of the libraries is a simple GrowthBook wrapper class that takes a Context object in the constructor.
 ///
 /// It exposes two main methods: feature and run.
-@objc public class GrowthBookSDK: NSObject, FeaturesFlowDelegate {
+@objc public class GrowthBookSDK: NSObject {
     private var refreshHandler: CacheRefreshHandler?
     private var subscriptions: [ExperimentRunCallback] = []
-    private var networkDispatcher: NetworkProtocol
-    public var gbContext: Context
+    private var gbContext: Context
     private var featureVM: FeaturesViewModel!
     private var forcedFeatures: JSON = JSON()
     private var attributeOverrides: JSON = JSON()
-    private var savedGroupsValues: JSON?
     private var evalContext: EvalContext? = nil
     private var cachingManager: GrowthBookSDKCachingManagerInterface
 
-    init(context: Context,
-         refreshHandler: CacheRefreshHandler? = nil,
-         logLevel: Level = .info,
-         networkDispatcher: NetworkProtocol = CoreNetworkClient(),
-         features: Features? = nil,
-         savedGroups: JSON? = nil,
-         cachingManager: GrowthBookSDKCachingManagerInterface) {
+    init(
+        instance: GrowthBookInstance,
+        context: Context,
+        refreshHandler: CacheRefreshHandler? = nil,
+        logLevel: Level = .info,
+        networkDispatcher: NetworkProtocol = CoreNetworkClient(),
+        features: Features? = nil,
+        savedGroups: JSON? = nil,
+        cachingManager: GrowthBookSDKCachingManagerInterface
+    )
+    {
         gbContext = context
         self.refreshHandler = refreshHandler
-        self.networkDispatcher = networkDispatcher
-        self.savedGroupsValues = savedGroups
         self.cachingManager = cachingManager
+
         super.init()
-        self.featureVM = FeaturesViewModel(delegate: self, dataSource: FeaturesDataSource(dispatcher: networkDispatcher), featuresCache: cachingManager.featuresCache, savedGroupsCache: cachingManager.savedGroupsCache)
+
+        let crypto: CryptoProtocol = Crypto()
+        let featuresResponseDecryptor: FeaturesResponseDecryptorInterface = FeaturesResponseDecryptor(
+            payloadType: instance.payloadType,
+            crypto: crypto
+        )
+        let featuresDataParser: FeaturesDataParserInterface = FeaturesDataParser(
+            featuresResponseDecryptor: featuresResponseDecryptor,
+            decoder: JSONDecoder()
+        )
+
+        let remoteEvaluationParameters = RemoteEvalParams(attributes: gbContext.attributes, forcedFeatures: self.forcedFeatures, forcedVariations: gbContext.forcedVariations )
+
+        let featuresModelFetcher: FeaturesModelFetcherInterface = FeaturesModelFetcher(
+            payloadType: instance.payloadType,
+            featuresURL: instance.featuresURL,
+            remoteEvaluatedFeaturesURL: instance.remoteEvalURL,
+            remoteEvaluationParameters: remoteEvaluationParameters,
+            featuresDataParser: featuresDataParser
+        )
+
+        let featuresModelProvider: FeaturesModelProviderInterface? = FeaturesModelProviderBuilder.build(
+            refreshPolicy: instance.refreshPolicy,
+            serverSideEventsURL: instance.serverSideEventsURL,
+            featuresDataParser: featuresDataParser,
+            featuresModelFetcher: featuresModelFetcher
+        )
+
         if let features = features {
             gbContext.features = features
-        } else {
-            featureVM.encryptionKey = context.encryptionKey ?? ""
-            refreshCache()
         }
+
+        self.featureVM = FeaturesViewModel(
+            delegate: self,
+            featuresCache: cachingManager.featuresCache,
+            savedGroupsCache: cachingManager.savedGroupsCache,
+            featuresModelProvider: featuresModelProvider,
+            featuresModelFetcher: featuresModelFetcher
+        )
 
         if let savedGroups {
             context.savedGroups = savedGroups
         }
         self.evalContext = Utils.initializeEvalContext(context: context)
 
-        // if the SSE URL is available and background sync variable is set to true, then we have to connect to SSE Server
-        if let sseURL = context.getSSEUrl(), context.backgroundSync {
-            featureVM.connectBackgroundSync(sseUrl: sseURL)
-        }
 
         // Logger setup. if we have logHandler we have to re-initialise logger
         logger.minLevel = logLevel
@@ -243,11 +281,7 @@ struct GrowthBookCacheOptions {
 
     /// Manually Refresh Cache
     @objc public func refreshCache() {
-        if gbContext.remoteEval {
-            refreshForRemoteEval()
-        } else {
-            featureVM.fetchFeatures(apiUrl: gbContext.getFeaturesURL())
-        }
+        featureVM.fetchFeaturesOnce()
     }
 
     /// This function removes all files and subdirectories within the designated cache directory, which is a specific subdirectory within the app's cache directory.
@@ -278,43 +312,6 @@ struct GrowthBookCacheOptions {
     /// Get the value of the feature with a fallback
     public func getFeatureValue(feature id: String, default defaultValue: JSON) -> JSON {
         return FeatureEvaluator(context: Utils.initializeEvalContext(context: gbContext), featureKey: id).evaluateFeature().value ?? defaultValue
-    }
-
-    @objc public func featuresFetchedSuccessfully(features: [String: Feature], isRemote: Bool) {
-        gbContext.features = features
-        if isRemote {
-            refreshHandler?(true)
-        }
-    }
-
-    /// The setEncryptedFeatures method takes an encrypted string with an encryption key and then decrypts it with the default method of decrypting or with a method of decrypting from the user
-    @objc public func setEncryptedFeatures(encryptedString: String, encryptionKey: String, subtle: CryptoProtocol? = nil) {
-        let crypto: CryptoProtocol = subtle ?? Crypto()
-        guard let features = crypto.getFeaturesFromEncryptedFeatures(encryptedString: encryptedString, encryptionKey: encryptionKey) else { return }
-
-        gbContext.features = features
-    }
-
-    @objc public func featuresFetchFailed(error: SDKError, isRemote: Bool) {
-        if isRemote {
-            refreshHandler?(false)
-        }
-    }
-
-    public func savedGroupsFetchFailed(error: SDKError, isRemote: Bool) {
-        refreshHandler?(false)
-    }
-
-    public func savedGroupsFetchedSuccessfully(savedGroups: JSON, isRemote: Bool) {
-        gbContext.savedGroups = savedGroups
-        refreshHandler?(true)
-    }
-
-    /// If remote eval is enabled, send needed data to backend to proceed remote evaluation
-    @objc public func refreshForRemoteEval() {
-        if !gbContext.remoteEval { return }
-        let payload = RemoteEvalParams(attributes: gbContext.attributes, forcedFeatures: self.forcedFeatures, forcedVariations: gbContext.forcedVariations )
-        featureVM.fetchFeatures(apiUrl: gbContext.getRemoteEvalUrl(), remoteEval: gbContext.remoteEval, payload: payload)
     }
 
     /// The feature method takes a single string argument, which is the unique identifier for the feature and returns a FeatureResult object.
@@ -354,23 +351,41 @@ struct GrowthBookCacheOptions {
         if gbContext.stickyBucketService != nil {
             refreshStickyBucketService()
         }
+
         refreshForRemoteEval()
     }
 
     /// The setForcedVariations method updates forced variations and makes API call if remote eval is enabled
     @objc public func setForcedVariations(forcedVariations: Any) {
         gbContext.forcedVariations = JSON(forcedVariations)
+
         refreshForRemoteEval()
     }
 
-    func featuresAPIModelSuccessfully(model: FeaturesDataModel) {
+    func featuresAPIModelSuccessfully(model: DecryptedFeaturesDataModel) {
         refreshStickyBucketService(model)
     }
 
-    private func refreshStickyBucketService(_ data: FeaturesDataModel? = nil) {
+    private func refreshStickyBucketService(_ data: DecryptedFeaturesDataModel? = nil) {
         if (gbContext.stickyBucketService != nil) {
             Utils.refreshStickyBuckets(context: evalContext!, attributes: evalContext!.userContext.attributes, data: data)
             gbContext.stickyBucketAssignmentDocs = evalContext?.options.stickyBucketAssignmentDocs
         }
+    }
+
+    func refreshForRemoteEval() {
+        featureVM.fetchFeaturesOnce()
+    }
+}
+
+extension GrowthBookSDK: FeaturesFlowDelegate {
+    func featuresAPIModelSuccessfully(model: DecryptedFeaturesDataModel, fetchType: GrowthBookFeaturesFetchResult.FetchType) {
+        gbContext.features = model.features
+        gbContext.savedGroups = model.savedGroups
+        refreshHandler?(.init(type: fetchType, error: nil))
+    }
+    
+    func featuresFetchFailed(error: any Error, fetchType: GrowthBookFeaturesFetchResult.FetchType) {
+        refreshHandler?(.init(type: fetchType, error: error))
     }
 }
