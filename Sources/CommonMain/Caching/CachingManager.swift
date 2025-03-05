@@ -15,7 +15,7 @@ public class CachingManager: CachingLayer {
     public static let shared = CachingManager()
 
     static func keyHash(_ input: String) -> String {
-        String(input.sha256HashString.prefix(5))
+        input.sha256HashString
     }
 
     private var cacheDirectoryURL: URL
