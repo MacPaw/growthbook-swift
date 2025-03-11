@@ -2,15 +2,9 @@ import Foundation
 
 /// Interface for Feature API Completion Events
 protocol FeaturesFlowDelegate: AnyObject {
-//    func featuresFetchedSuccessfully(features: Features, isRemote: Bool)
-
     func featuresAPIModelSuccessfully(model: DecryptedFeaturesDataModel, fetchType: GrowthBookFeaturesFetchResult.FetchType)
 
     func featuresFetchFailed(error: Error, fetchType: GrowthBookFeaturesFetchResult.FetchType)
-//
-//    func savedGroupsFetchFailed(error: Error, isRemote: Bool)
-//
-//    func savedGroupsFetchedSuccessfully(savedGroups: JSON, isRemote: Bool)
 }
 
 

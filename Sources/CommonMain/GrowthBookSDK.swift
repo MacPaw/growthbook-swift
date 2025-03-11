@@ -62,28 +62,28 @@ struct GrowthBookCacheOptions {
 @objc public class GrowthBookBuilder: NSObject, GrowthBookProtocol {
     var growthBookBuilderModel: GrowthBookModel
 
-    private var refreshHandler: CacheRefreshHandler?
+    private var featuresFetchResultHandler: FeaturesFetchResultHandler?
     private var networkDispatcher: NetworkProtocol = CoreNetworkClient()
     private var cacheOptions: GrowthBookCacheOptions = .init(cacheDirectory: .applicationSupport, featureCacheFilename: "\(Constants.featureCache).txt", savedGroupsCacheFilename: "\(Constants.savedGroupsCache).txt")
 
-    public init(apiHost: String? = nil, clientKey: String? = nil, encryptionKey: String? = nil, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, refreshHandler: CacheRefreshHandler? = nil, backgroundSync: Bool = false, remoteEval: Bool = false) {
+    public init(apiHost: String? = nil, clientKey: String? = nil, encryptionKey: String? = nil, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, featuresFetchResultHandler: FeaturesFetchResultHandler? = nil, backgroundSync: Bool = false, remoteEval: Bool = false) {
         growthBookBuilderModel = GrowthBookModel(apiHost: apiHost, clientKey: clientKey, encryptionKey: encryptionKey, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
-        self.refreshHandler = refreshHandler
+        self.featuresFetchResultHandler = featuresFetchResultHandler
     }
 
-    public init(features: Data, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, refreshHandler: CacheRefreshHandler? = nil, backgroundSync: Bool, remoteEval: Bool = false) {
+    public init(features: Data, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, featuresFetchResultHandler: FeaturesFetchResultHandler? = nil, backgroundSync: Bool, remoteEval: Bool = false) {
         growthBookBuilderModel = GrowthBookModel(features: features, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
-        self.refreshHandler = refreshHandler
+        self.featuresFetchResultHandler = featuresFetchResultHandler
     }
 
-    init(apiHost: String, clientKey: String, encryptionKey: String? = nil, attributes: JSON, trackingCallback: @escaping TrackingCallback, refreshHandler: CacheRefreshHandler?, backgroundSync: Bool, remoteEval: Bool = false) {
+    init(apiHost: String, clientKey: String, encryptionKey: String? = nil, attributes: JSON, trackingCallback: @escaping TrackingCallback, featuresFetchResultHandler: FeaturesFetchResultHandler?, backgroundSync: Bool, remoteEval: Bool = false) {
         growthBookBuilderModel = GrowthBookModel(apiHost: apiHost, clientKey: clientKey, encryptionKey: encryptionKey, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
-        self.refreshHandler = refreshHandler
+        self.featuresFetchResultHandler = featuresFetchResultHandler
     }
 
     /// Set Refresh Handler - Will be called when cache is refreshed
-    public func setRefreshHandler(refreshHandler: @escaping CacheRefreshHandler) -> GrowthBookBuilder {
-        self.refreshHandler = refreshHandler
+    public func setRefreshHandler(featuresFetchResultHandler: @escaping FeaturesFetchResultHandler) -> GrowthBookBuilder {
+        self.featuresFetchResultHandler = featuresFetchResultHandler
         return self
     }
 
@@ -194,7 +194,7 @@ struct GrowthBookCacheOptions {
             refreshPolicy: .respectfulPolling(interval: 60.0)
         )
 
-        return GrowthBookSDK(instance: instance, context: gbContext, refreshHandler: refreshHandler, networkDispatcher: networkDispatcher, cachingManager: cachingManager)
+        return GrowthBookSDK(instance: instance, context: gbContext, featuresFetchResultHandler: featuresFetchResultHandler, networkDispatcher: networkDispatcher, cachingManager: cachingManager)
     }
 }
 
@@ -202,7 +202,7 @@ struct GrowthBookCacheOptions {
 ///
 /// It exposes two main methods: feature and run.
 @objc public class GrowthBookSDK: NSObject {
-    private var refreshHandler: CacheRefreshHandler?
+    private var featuresFetchResultHandler: FeaturesFetchResultHandler?
     private var subscriptions: [ExperimentRunCallback] = []
     private var gbContext: Context
     private var featureVM: FeaturesViewModel!
@@ -214,7 +214,7 @@ struct GrowthBookCacheOptions {
     init(
         instance: GrowthBookInstance,
         context: Context,
-        refreshHandler: CacheRefreshHandler? = nil,
+        featuresFetchResultHandler: FeaturesFetchResultHandler? = nil,
         logLevel: Level = .info,
         networkDispatcher: NetworkProtocol = CoreNetworkClient(),
         features: Features? = nil,
@@ -223,7 +223,7 @@ struct GrowthBookCacheOptions {
     )
     {
         gbContext = context
-        self.refreshHandler = refreshHandler
+        self.featuresFetchResultHandler = featuresFetchResultHandler
         self.cachingManager = cachingManager
 
         super.init()
@@ -382,10 +382,10 @@ extension GrowthBookSDK: FeaturesFlowDelegate {
     func featuresAPIModelSuccessfully(model: DecryptedFeaturesDataModel, fetchType: GrowthBookFeaturesFetchResult.FetchType) {
         gbContext.features = model.features
         gbContext.savedGroups = model.savedGroups
-        refreshHandler?(.init(type: fetchType, error: nil))
+        featuresFetchResultHandler?(.init(type: fetchType, error: nil))
     }
     
     func featuresFetchFailed(error: any Error, fetchType: GrowthBookFeaturesFetchResult.FetchType) {
-        refreshHandler?(.init(type: fetchType, error: error))
+        featuresFetchResultHandler?(.init(type: fetchType, error: error))
     }
 }
