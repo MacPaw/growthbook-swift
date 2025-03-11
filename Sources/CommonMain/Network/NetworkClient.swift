@@ -13,16 +13,16 @@ public protocol NetworkProtocol: AnyObject, Sendable {
 }
 
 
-final class CoreNetworkClient: NetworkProtocol {
+public final class CoreNetworkClient: NetworkProtocol {
 
-    private let session: URLSession
+    private let urlSession: URLSession
 
-    init(session: URLSession = .shared) {
-        self.session = session
+    public init(urlSession: URLSession = .shared) {
+        self.urlSession = urlSession
     }
 
-    func consumeRequest(urlRequest: URLRequest, completion: @escaping @Sendable (Result<GrowthBookNetworkResponse, Swift.Error>) -> Void) {
-        let dataTask = session.dataTask(with: urlRequest) { (data: Data?, urlResponse: URLResponse?, error: Swift.Error?) in
+    public func consumeRequest(urlRequest: URLRequest, completion: @escaping @Sendable (Result<GrowthBookNetworkResponse, Swift.Error>) -> Void) {
+        let dataTask = urlSession.dataTask(with: urlRequest) { (data: Data?, urlResponse: URLResponse?, error: Swift.Error?) in
             guard error == nil else {
                 return completion(.failure(ResponseError.urlRequestError(error!, response: urlResponse, payload: data)))
             }

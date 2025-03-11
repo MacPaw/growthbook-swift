@@ -10,10 +10,8 @@ protocol GrowthBookProtocol: AnyObject {
     func initializer() -> GrowthBookSDK
 }
 
-public struct GrowthBookModel {
-    var apiHost: String?
-    var clientKey: String?
-    var encryptionKey: String?
+public struct GrowthBookModel: Sendable {
+    var instance: GrowthBookInstance
     var features: Data?
     var attributes: JSON
     var trackingClosure: TrackingCallback
@@ -22,16 +20,14 @@ public struct GrowthBookModel {
     var isEnabled: Bool = true
     var forcedVariations: JSON?
     var stickyBucketService: StickyBucketServiceProtocol?
-    var backgroundSync: Bool
-    var remoteEval: Bool
 }
 
-struct GrowthBookCacheOptions {
-    let directoryURL: URL
-    let featureCacheFilename: String
-    let savedGroupsCacheFilename: String
+public struct GrowthBookCacheOptions: Sendable, Equatable {
+    public let directoryURL: URL
+    public let featureCacheFilename: String
+    public let savedGroupsCacheFilename: String
 
-    init(directoryURL: URL, featureCacheFilename: String, savedGroupsCacheFilename: String) {
+    public init(directoryURL: URL, featureCacheFilename: String, savedGroupsCacheFilename: String) {
         self.directoryURL = directoryURL
         self.featureCacheFilename = featureCacheFilename
         self.savedGroupsCacheFilename = savedGroupsCacheFilename
@@ -45,7 +41,7 @@ struct GrowthBookCacheOptions {
         )
     }
 
-    func settingDirectoryURL(_ directoryURL: URL) -> Self {
+    public func settingDirectoryURL(_ directoryURL: URL) -> Self {
         .init(
             directoryURL: directoryURL,
             featureCacheFilename: featureCacheFilename,
@@ -53,6 +49,7 @@ struct GrowthBookCacheOptions {
         )
     }
 }
+
 
 /// GrowthBookBuilder - inItializer for GrowthBook SDK for Apps
 /// - HostURL - Server URL
@@ -66,20 +63,32 @@ struct GrowthBookCacheOptions {
     private var networkDispatcher: NetworkProtocol = CoreNetworkClient()
     private var cacheOptions: GrowthBookCacheOptions = .init(cacheDirectory: .applicationSupport, featureCacheFilename: "\(Constants.featureCache).txt", savedGroupsCacheFilename: "\(Constants.savedGroupsCache).txt")
 
-    public init(apiHost: String? = nil, clientKey: String? = nil, encryptionKey: String? = nil, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, featuresFetchResultHandler: FeaturesFetchResultHandler? = nil, backgroundSync: Bool = false, remoteEval: Bool = false) {
-        growthBookBuilderModel = GrowthBookModel(apiHost: apiHost, clientKey: clientKey, encryptionKey: encryptionKey, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
+    public init(
+        growthBookBuilderModel: GrowthBookModel,
+        featuresFetchResultHandler: FeaturesFetchResultHandler? = nil,
+        networkDispatcher: NetworkProtocol = CoreNetworkClient(),
+        cacheOptions: GrowthBookCacheOptions
+    )
+    {
+        self.growthBookBuilderModel = growthBookBuilderModel
         self.featuresFetchResultHandler = featuresFetchResultHandler
+        self.networkDispatcher = networkDispatcher
+        self.cacheOptions = cacheOptions
     }
-
-    public init(features: Data, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, featuresFetchResultHandler: FeaturesFetchResultHandler? = nil, backgroundSync: Bool, remoteEval: Bool = false) {
-        growthBookBuilderModel = GrowthBookModel(features: features, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
-        self.featuresFetchResultHandler = featuresFetchResultHandler
-    }
-
-    init(apiHost: String, clientKey: String, encryptionKey: String? = nil, attributes: JSON, trackingCallback: @escaping TrackingCallback, featuresFetchResultHandler: FeaturesFetchResultHandler?, backgroundSync: Bool, remoteEval: Bool = false) {
-        growthBookBuilderModel = GrowthBookModel(apiHost: apiHost, clientKey: clientKey, encryptionKey: encryptionKey, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
-        self.featuresFetchResultHandler = featuresFetchResultHandler
-    }
+//    public init(apiHost: String? = nil, clientKey: String? = nil, encryptionKey: String? = nil, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, featuresFetchResultHandler: FeaturesFetchResultHandler? = nil, backgroundSync: Bool = false, remoteEval: Bool = false) {
+//        growthBookBuilderModel = GrowthBookModel(apiHost: apiHost, clientKey: clientKey, encryptionKey: encryptionKey, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
+//        self.featuresFetchResultHandler = featuresFetchResultHandler
+//    }
+//
+//    public init(features: Data, attributes: [String: Any], trackingCallback: @escaping TrackingCallback, featuresFetchResultHandler: FeaturesFetchResultHandler? = nil, backgroundSync: Bool, remoteEval: Bool = false) {
+//        growthBookBuilderModel = GrowthBookModel(features: features, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
+//        self.featuresFetchResultHandler = featuresFetchResultHandler
+//    }
+//
+//    init(apiHost: String, clientKey: String, encryptionKey: String? = nil, attributes: JSON, trackingCallback: @escaping TrackingCallback, featuresFetchResultHandler: FeaturesFetchResultHandler?, backgroundSync: Bool, remoteEval: Bool = false) {
+//        growthBookBuilderModel = GrowthBookModel(apiHost: apiHost, clientKey: clientKey, encryptionKey: encryptionKey, attributes: JSON(attributes), trackingClosure: trackingCallback, backgroundSync: backgroundSync, remoteEval: remoteEval)
+//        self.featuresFetchResultHandler = featuresFetchResultHandler
+//    }
 
     /// Set Refresh Handler - Will be called when cache is refreshed
     public func setRefreshHandler(featuresFetchResultHandler: @escaping FeaturesFetchResultHandler) -> GrowthBookBuilder {
@@ -124,12 +133,12 @@ struct GrowthBookCacheOptions {
     @available(*, deprecated, renamed: "setCacheDirectoryURL", message: "Use setCacheDirectoryURL instead")
     public func setCacheDirectory(_ directory: CacheDirectory) -> GrowthBookBuilder {
         let cacheDirectorySuffix: String
-        if let clientKey = growthBookBuilderModel.clientKey {
-            let hashedClientKey: String = CachingManager.keyHash(clientKey)
+//        if let clientKey = growthBookBuilderModel.instance.clientKey {
+            let hashedClientKey: String = CachingManager.keyHash(growthBookBuilderModel.instance.clientKey)
             cacheDirectorySuffix = "-\(hashedClientKey)"
-        } else {
-            cacheDirectorySuffix = ""
-        }
+//        } else {
+//            cacheDirectorySuffix = ""
+//        }
 
         let directoryURL: URL = directory.url.appendingPathComponent("GrowthBook-Cache\(cacheDirectorySuffix)", isDirectory: true)
 
@@ -144,28 +153,17 @@ struct GrowthBookCacheOptions {
 
     @objc public func initializer() -> GrowthBookSDK {
         let gbContext = Context(
-//            apiHost: growthBookBuilderModel.apiHost,
-//            clientKey: growthBookBuilderModel.clientKey,
-//            encryptionKey: growthBookBuilderModel.encryptionKey,
             isEnabled: growthBookBuilderModel.isEnabled,
             attributes: growthBookBuilderModel.attributes,
             forcedVariations: growthBookBuilderModel.forcedVariations,
             stickyBucketService: growthBookBuilderModel.stickyBucketService,
             isQaMode: growthBookBuilderModel.isQaMode,
             trackingClosure: growthBookBuilderModel.trackingClosure,
-//            backgroundSync: growthBookBuilderModel.backgroundSync,
-//            remoteEval: growthBookBuilderModel.remoteEval
         )
-        
 
-        let cacheDirectoryURL: URL
-        if let clientKey = growthBookBuilderModel.clientKey {
-            let hashedClientKey: String = CachingManager.keyHash(clientKey)
-            cacheDirectoryURL = cacheOptions.directoryURL
-                .appendingPathComponent("\(hashedClientKey)")
-        } else {
-            cacheDirectoryURL = cacheOptions.directoryURL
-        }
+        let hashedClientKey: String = CachingManager.keyHash(growthBookBuilderModel.instance.clientKey)
+        let cacheDirectoryURL = cacheOptions.directoryURL
+            .appendingPathComponent("\(hashedClientKey)")
 
         if let stickyBucketService = growthBookBuilderModel.stickyBucketService {
             stickyBucketService.updateCacheDirectoryURL(
@@ -184,14 +182,11 @@ struct GrowthBookCacheOptions {
             try? cachingManager.featuresCache.setEncodedFeaturesRawData(features)
         }
 
-        // TODO: payload type
-        // TODO: Refresh policy
-
         let instance: GrowthBookInstance = .init(
-            apiHostURL: URL(string: growthBookBuilderModel.apiHost!)!,
-            clientKey: growthBookBuilderModel.clientKey!,
-            payloadType: .plainText,
-            refreshPolicy: .respectfulPolling(interval: 60.0)
+            apiHostURL: growthBookBuilderModel.instance.apiHostURL,
+            clientKey: growthBookBuilderModel.instance.clientKey,
+            payloadType: growthBookBuilderModel.instance.payloadType,
+            refreshPolicy: growthBookBuilderModel.instance.refreshPolicy
         )
 
         return GrowthBookSDK(instance: instance, context: gbContext, featuresFetchResultHandler: featuresFetchResultHandler, networkDispatcher: networkDispatcher, cachingManager: cachingManager)
@@ -202,14 +197,14 @@ struct GrowthBookCacheOptions {
 ///
 /// It exposes two main methods: feature and run.
 @objc public class GrowthBookSDK: NSObject {
-    private var featuresFetchResultHandler: FeaturesFetchResultHandler?
+    private let featuresFetchResultHandler: FeaturesFetchResultHandler?
     private var subscriptions: [ExperimentRunCallback] = []
-    private var gbContext: Context
+    private let gbContext: Context
     private var featureVM: FeaturesViewModel!
     private var forcedFeatures: JSON = JSON()
     private var attributeOverrides: JSON = JSON()
     private var evalContext: EvalContext? = nil
-    private var cachingManager: GrowthBookSDKCachingManagerInterface
+    private let cachingManager: GrowthBookSDKCachingManagerInterface
 
     init(
         instance: GrowthBookInstance,
