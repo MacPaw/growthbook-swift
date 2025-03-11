@@ -16,7 +16,7 @@ public typealias Features = [String: Feature]
 /// Type Alias for Condition Element in GrowthBook Rules
 typealias Condition = JSON
 
-public struct ParentConditionInterface: Codable {
+public struct ParentConditionInterface: Codable, Sendable {
     public let id: String
     public let condition: JSON
     public let gate: Bool?
@@ -102,7 +102,7 @@ public struct VariationMeta: Codable, Sendable {
     }
 }
 
-public struct Track: Codable {
+public struct Track: Codable, Sendable {
     public let experiment: Experiment?
     public let result: FeatureResult?
     
@@ -125,18 +125,18 @@ public struct TrackData: Codable {
 }
 
 /// Object used for mutual exclusion and filtering users out of experiments based on random hashes.
-@objc public class Filter: NSObject, Codable {
+@objc public final class Filter: NSObject, Codable, Sendable {
     /// The attribute to use (default to `"id"`)
-    var attribute: String?
+    let attribute: String?
     /// The seed used in the hash
-    var seed: String
+    let seed: String
     /// The hash version to use (default to `2`)
-    var hashVersion: Float
+    let hashVersion: Float
     /// Array of ranges that are included
-    var ranges: [BucketRange]
-    
-    var fallbackAttribute: String?
-    
+    let ranges: [BucketRange]
+
+    let fallbackAttribute: String?
+
     init(attribute: String?, seed: String, hashVersion: Float, ranges: [BucketRange], fallbackAttribute: String?) {
         self.attribute = attribute
         self.seed = seed
@@ -152,5 +152,6 @@ public struct TrackData: Codable {
         self.ranges = json["ranges"]?.map({ key, value in
             BucketRange(json: value)
         }) ?? []
+        self.fallbackAttribute = .none
     }
 }
