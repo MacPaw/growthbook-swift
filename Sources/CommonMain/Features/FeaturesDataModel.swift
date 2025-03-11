@@ -28,7 +28,7 @@ struct FeaturesDataModel {
     var experiments: ProbablyEncryptedValue<[Experiment]>?
 }
 
-struct DecryptedFeaturesDataModel: @unchecked Sendable {
+struct DecryptedFeaturesDataModel: Sendable {
     var dateUpdated: String?
 
     var features: Features

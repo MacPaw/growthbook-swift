@@ -16,7 +16,7 @@ protocol FeaturesModelFetcherInterface: Sendable {
     func fetchFeatures(fetchResult callback: @escaping @Sendable (Result<FeaturesModelResponse, Error>) -> Void)
 }
 
-struct FeaturesModelFetcher: @unchecked Sendable {
+struct FeaturesModelFetcher: Sendable {
     private let payloadType: GrowthBookInstance.PayloadType
     private let featuresURL: URL
     private let remoteEvaluatedFeaturesURL: URL
@@ -107,6 +107,14 @@ extension Result {
 }
 
 extension HTTPURLResponse {
+    private func _value(forHTTPHeaderField: String) -> String? {
+        if #available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, visionOS 1.0, *) {
+            value(forHTTPHeaderField: "Age")
+        } else {
+            allHeaderFields["Age"] as? String
+        }
+    }
+    
     fileprivate func responseExpiresIn() -> Int {
         let expiresIn = (sMaxAgeHeaderValue() ?? maxAgeHeaderValue()) - ageHeaderValue()
         guard expiresIn == 0 else { return expiresIn }
@@ -115,15 +123,15 @@ extension HTTPURLResponse {
     }
 
     private func ageHeaderValue() -> Int {
-        value(forHTTPHeaderField: "Age").flatMap(Int.init(_:)) ?? 0
+        _value(forHTTPHeaderField: "Age").flatMap(Int.init(_:)) ?? 0
     }
 
     private func expiresHeaderValue() -> Date? {
-        value(forHTTPHeaderField: "Expires").flatMap(DateFormatter.httpHeaderDateFormatter.date(from:))
+        _value(forHTTPHeaderField: "Expires").flatMap(DateFormatter.httpHeaderDateFormatter.date(from:))
     }
 
     private func sMaxAgeHeaderValue() -> Int? {
-        guard let cacheControl = value(forHTTPHeaderField: "Cache-Control") else { return nil }
+        guard let cacheControl = _value(forHTTPHeaderField: "Cache-Control") else { return nil }
 
         let keyValues: [String: String] = cacheControl
             .split(separator: ",")
@@ -140,7 +148,7 @@ extension HTTPURLResponse {
     }
 
     private func maxAgeHeaderValue() -> Int {
-        guard let cacheControl = value(forHTTPHeaderField: "Cache-Control") else { return 0 }
+        guard let cacheControl = _value(forHTTPHeaderField: "Cache-Control") else { return 0 }
 
         let keyValues: [String: String] = cacheControl
             .split(separator: ",")

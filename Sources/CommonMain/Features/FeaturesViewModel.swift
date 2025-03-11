@@ -15,7 +15,7 @@ protocol FeaturesFlowDelegate: AnyObject {
 
 
 /// View Model for Features
-final class FeaturesViewModel {
+final class FeaturesViewModel: Sendable {
     private class MutableState {
         weak var delegate: FeaturesFlowDelegate?
 

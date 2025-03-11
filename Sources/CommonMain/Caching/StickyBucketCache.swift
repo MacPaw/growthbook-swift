@@ -31,7 +31,7 @@ public protocol StickyBucketFileStorageCacheInterface: StickyBucketCacheInterfac
 
 /// Default implementation of the `StickyBucketFileStorageCacheInterface`.
 final public class StickyBucketFileStorageCache {
-    private struct MutableState {
+    private struct MutableState: Sendable {
         var directoryURL: URL
         var storage: KeyedStorageBox<StickyAssignmentsDocument>
     }
