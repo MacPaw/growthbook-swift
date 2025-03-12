@@ -84,11 +84,27 @@ final class FeaturesViewModel: Sendable {
         }
     }
 
+    private func updateCache(with response: DecryptedFeaturesDataModel) {
+        try? featuresCache.updateFeatures(response.features)
+        try? savedGroupsCache.updateSavedGroups(response.savedGroups)
+    }
+
+    private func handleFeaturesFetchResult(_ result: Result<DecryptedFeaturesDataModel, any Error>, fetchType: GrowthBookFeaturesFetchResult.FetchType) {
+        switch result {
+        case let .success(response):
+            updateCache(with: response)
+        case .failure:
+            break
+        }
+
+        self.notifyDelegateAboutFetchResult(result, fetchType: fetchType)
+    }
+
     func fetchFeaturesOnce() {
         featuresModelFetcher.fetchFeatures { [weak self] (result: Result<FeaturesModelResponse, any Error>) in
             guard let self else { return }
 
-            self.notifyDelegateAboutFetchResult(result.map(\.decryptedFeaturesDataModel), fetchType: .remoteForced)
+            self.handleFeaturesFetchResult(result.map(\.decryptedFeaturesDataModel), fetchType: .remoteForced)
         }
     }
 
@@ -96,7 +112,7 @@ final class FeaturesViewModel: Sendable {
         featuresModelFetcher.fetchFeatures { [weak self] (result: Result<FeaturesModelResponse, any Error>) in
             guard let self else { return }
 
-            self.notifyDelegateAboutFetchResult(result.map(\.decryptedFeaturesDataModel), fetchType: .initialRemote)
+            self.handleFeaturesFetchResult(result.map(\.decryptedFeaturesDataModel), fetchType: .initialRemote)
 
             self.subscribeToFeaturesUpdates()
         }
@@ -110,10 +126,10 @@ final class FeaturesViewModel: Sendable {
 
 extension FeaturesViewModel: FeaturesModelProviderDelegate {
     func featuresProvider(_ provider: any FeaturesModelProviderInterface, didUpdate featuresModel: DecryptedFeaturesDataModel) {
-        self.notifyDelegateAboutFetchResult(.success(featuresModel), fetchType: .remoteRefresh)
+        handleFeaturesFetchResult(.success(featuresModel), fetchType: .remoteRefresh)
     }
 
     func featuresProvider(_ provider: any FeaturesModelProviderInterface, didFailToUpdate error: any Error) {
-        self.notifyDelegateAboutFetchResult(.failure(error), fetchType: .remoteRefresh)
+        handleFeaturesFetchResult(.failure(error), fetchType: .remoteRefresh)
     }
 }
