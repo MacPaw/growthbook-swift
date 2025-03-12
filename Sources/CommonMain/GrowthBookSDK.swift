@@ -73,7 +73,6 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
     }
 }
 
-
 /// GrowthBookBuilder - inItializer for GrowthBook SDK for Apps
 /// - HostURL - Server URL
 /// - EncryptionKey - Key for decrypting encrypted feature from API
@@ -244,6 +243,13 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
         self.featuresFetchResultHandler = featuresFetchResultHandler
         self.cachingManager = cachingManager
 
+        if let features {
+            try? cachingManager.featuresCache.updateFeatures(features)
+        }
+        if let savedGroups {
+            try? cachingManager.savedGroupsCache.updateSavedGroups(savedGroups)
+        }
+
         super.init()
 
         let crypto: CryptoProtocol = Crypto()
@@ -387,6 +393,7 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
 
     private func refreshStickyBucketService(_ data: DecryptedFeaturesDataModel? = nil) {
         if (gbContext.stickyBucketService != nil) {
+            let evalContext = self.evalContext
             Utils.refreshStickyBuckets(context: evalContext!, attributes: evalContext!.userContext.attributes, data: data)
             gbContext.stickyBucketAssignmentDocs = evalContext?.options.stickyBucketAssignmentDocs
         }
@@ -398,9 +405,18 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
 }
 
 extension GrowthBookSDK: FeaturesFlowDelegate {
+    private func updateEvaluationContext(with newContext: Context) {
+        self.evalContext = Utils.initializeEvalContext(context: newContext)
+    }
+
     func featuresAPIModelSuccessfully(model: DecryptedFeaturesDataModel, fetchType: GrowthBookFeaturesFetchResult.FetchType) {
         gbContext.features = model.features
         gbContext.savedGroups = model.savedGroups
+
+        updateEvaluationContext(with: gbContext)
+
+        refreshStickyBucketService(model)
+        
         featuresFetchResultHandler?(.init(type: fetchType, error: nil))
     }
     

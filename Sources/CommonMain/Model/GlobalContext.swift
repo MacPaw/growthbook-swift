@@ -1,14 +1,14 @@
 import Foundation
 
 @objc public class GlobalContext: NSObject {
-    var features: Features
-    public var experiments: [Experiment]?
-    public var savedGroups: JSON?
+    let features: Features
+    public let experiments: [Experiment]?
+    public let savedGroups: JSON?
 
     init(
-        features: Features = [:],
-        experiments: [Experiment]? = nil,
-        savedGroups: JSON? = nil
+        features: Features,
+        experiments: [Experiment]?,
+        savedGroups: JSON?
     ) {
         self.features = features
         self.experiments = experiments
@@ -110,14 +110,14 @@ import Foundation
 @objc public class UserContext: NSObject {
     public let attributes: JSON
     public var stickyBucketAssignmentDocs: [String: StickyAssignmentsDocument]?
-    public var forcedVariations: JSON?
-    public var forcedFeatureValues: JSON?
+    public let forcedVariations: JSON?
+    public let forcedFeatureValues: JSON?
 
     init(
         attributes: JSON,
-        stickyBucketAssignmentDocs: [String : StickyAssignmentsDocument]? = nil,
-        forcedVariations: JSON? = nil,
-        forcedFeatureValues: JSON? = nil
+        stickyBucketAssignmentDocs: [String : StickyAssignmentsDocument]?,
+        forcedVariations: JSON?,
+        forcedFeatureValues: JSON?
     )
     {
         self.attributes = attributes
@@ -149,10 +149,10 @@ import Foundation
 }
 
 public struct EvalContext {
-    public var globalContext: GlobalContext
-    public var userContext: UserContext
-    public var stackContext: StackContext
-    public var options: MultiUserOptions
+    public let globalContext: GlobalContext
+    public let userContext: UserContext
+    public let stackContext: StackContext
+    public let options: MultiUserOptions
 
     init(globalContext: GlobalContext, userContext: UserContext, stackContext: StackContext, options: MultiUserOptions) {
         self.globalContext = globalContext

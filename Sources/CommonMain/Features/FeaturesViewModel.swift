@@ -57,14 +57,16 @@ final class FeaturesViewModel: Sendable {
     }
 
     private func fetchCachedFeatures() {
-        // Check for cache data
-        // TODO: Delegate if needed
-//        do {
-//            let features = try featuresCache.features() ?? [:]
-////            delegate?.featuresFetchedSuccessfully(features: features, isRemote: false)
-//        } catch {
-////            delegate?.featuresFetchFailed(error: error, isRemote: false)
-//        }
+        // Notifying delegate about initial fetch results, so the context will be valid.
+        // As for the full initialization with remote - it's on the side of the consumer
+        // to decide if they can treat initial cached context
+        do {
+            // If there is no cache - don't notify the delegate.
+            guard let features = try featuresCache.features(), let savedGroups = try savedGroupsCache.savedGroups() else { return }
+            notifyDelegateAboutFetchResult(.success(.init(features: features, savedGroups: savedGroups, experiments: [])), fetchType: .local)
+        } catch {
+            notifyDelegateAboutFetchResult(.failure(error), fetchType: .local)
+        }
     }
 
     private func notifyDelegateAboutFetchResult(

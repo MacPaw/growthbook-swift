@@ -393,7 +393,7 @@ public class Utils {
             trackingClosure: context.trackingClosure
         )
 
-        let globalContext = GlobalContext(features: context.features, savedGroups: context.savedGroups)
+        let globalContext = GlobalContext(features: context.features, experiments: .none, savedGroups: context.savedGroups)
         
         // should create manual force features
         let userContext = UserContext(attributes: context.attributes, stickyBucketAssignmentDocs: context.stickyBucketAssignmentDocs, forcedVariations: context.forcedVariations, forcedFeatureValues: nil)
