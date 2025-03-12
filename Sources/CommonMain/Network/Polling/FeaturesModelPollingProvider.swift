@@ -50,9 +50,9 @@ final class FeaturesModelPollingProvider {
         mutableState.write(\.timer, .none)
     }
 
-    private func handleFeaturesResponseStaleIn(_ staleIn: Int) {
+    private func handleFeaturesResponseStaleInSeconds(_ staleInSeconds: Int) {
         guard mode == .respectful else { return }
-        mutableState.read(\.timer)?.rescheduleNotEarlierThan(in: staleIn)
+        mutableState.read(\.timer)?.rescheduleNotEarlierThan(in: staleInSeconds)
     }
 
     private func fetchFeatures() {
@@ -62,7 +62,7 @@ final class FeaturesModelPollingProvider {
             switch result {
             case let .success(response):
                 delegate.featuresProvider(self, didUpdate: response.decryptedFeaturesDataModel)
-                self.handleFeaturesResponseStaleIn(response.expiresInSeconds)
+                self.handleFeaturesResponseStaleInSeconds(response.expiresInSeconds)
             case let .failure(error):
                 delegate.featuresProvider(self, didFailToUpdate: error)
             }

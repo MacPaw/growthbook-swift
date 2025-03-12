@@ -11,15 +11,38 @@ protocol GrowthBookProtocol: AnyObject {
 }
 
 public struct GrowthBookModel: Sendable {
-    var instance: GrowthBookInstance
-    var features: Data?
-    var attributes: JSON
-    var trackingClosure: TrackingCallback
-    var logLevel: Level = .info
-    var isQaMode: Bool = false
-    var isEnabled: Bool = true
-    var forcedVariations: JSON?
-    var stickyBucketService: StickyBucketServiceProtocol?
+    public var instance: GrowthBookInstance
+    public var features: Data?
+    public var attributes: JSON
+    public var trackingClosure: TrackingCallback
+    public var logLevel: Level = .info
+    public var isQaMode: Bool = false
+    public var isEnabled: Bool = true
+    public var forcedVariations: JSON?
+    public var stickyBucketService: StickyBucketServiceProtocol?
+
+    public init(
+        instance: GrowthBookInstance,
+        features: Data? = nil,
+        attributes: JSON,
+        trackingClosure: @escaping TrackingCallback,
+        logLevel: Level = .info,
+        isQaMode: Bool = false,
+        isEnabled: Bool = true,
+        forcedVariations: JSON? = nil,
+        stickyBucketService: StickyBucketServiceProtocol? = nil
+    )
+    {
+        self.instance = instance
+        self.features = features
+        self.attributes = attributes
+        self.trackingClosure = trackingClosure
+        self.logLevel = logLevel
+        self.isQaMode = isQaMode
+        self.isEnabled = isEnabled
+        self.forcedVariations = forcedVariations
+        self.stickyBucketService = stickyBucketService
+    }
 }
 
 public struct GrowthBookCacheOptions: Sendable, Equatable {
@@ -60,13 +83,13 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
     var growthBookBuilderModel: GrowthBookModel
 
     private var featuresFetchResultHandler: FeaturesFetchResultHandler?
-    private var networkDispatcher: NetworkProtocol = CoreNetworkClient()
+    private var networkDispatcher: GrowthBookNetworkProtocol = GrowthBookNetworkClient()
     private var cacheOptions: GrowthBookCacheOptions = .init(cacheDirectory: .applicationSupport, featureCacheFilename: "\(Constants.featureCache).txt", savedGroupsCacheFilename: "\(Constants.savedGroupsCache).txt")
 
     public init(
         growthBookBuilderModel: GrowthBookModel,
         featuresFetchResultHandler: FeaturesFetchResultHandler? = nil,
-        networkDispatcher: NetworkProtocol = CoreNetworkClient(),
+        networkDispatcher: GrowthBookNetworkProtocol = GrowthBookNetworkClient(),
         cacheOptions: GrowthBookCacheOptions
     )
     {
@@ -97,7 +120,7 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
     }
 
     /// Set Network Client - Network Client for Making API Calls
-    public func setNetworkDispatcher(networkDispatcher: NetworkProtocol) -> GrowthBookBuilder {
+    public func setNetworkDispatcher(networkDispatcher: GrowthBookNetworkProtocol) -> GrowthBookBuilder {
         self.networkDispatcher = networkDispatcher
         return self
     }
@@ -199,7 +222,7 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
 @objc public class GrowthBookSDK: NSObject {
     private let featuresFetchResultHandler: FeaturesFetchResultHandler?
     private var subscriptions: [ExperimentRunCallback] = []
-    private let gbContext: Context
+    public let gbContext: Context
     private var featureVM: FeaturesViewModel!
     private var forcedFeatures: JSON = JSON()
     private var attributeOverrides: JSON = JSON()
@@ -211,7 +234,7 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
         context: Context,
         featuresFetchResultHandler: FeaturesFetchResultHandler? = nil,
         logLevel: Level = .info,
-        networkDispatcher: NetworkProtocol = CoreNetworkClient(),
+        networkDispatcher: GrowthBookNetworkProtocol = GrowthBookNetworkClient(),
         features: Features? = nil,
         savedGroups: JSON? = nil,
         cachingManager: GrowthBookSDKCachingManagerInterface
@@ -240,6 +263,7 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
             featuresURL: instance.featuresURL,
             remoteEvaluatedFeaturesURL: instance.remoteEvalURL,
             remoteEvaluationParameters: remoteEvaluationParameters,
+            networkDispatcher: networkDispatcher,
             featuresDataParser: featuresDataParser
         )
 

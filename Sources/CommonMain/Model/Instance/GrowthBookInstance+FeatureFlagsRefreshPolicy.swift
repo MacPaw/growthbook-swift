@@ -22,7 +22,8 @@ extension GrowthBookInstance {
 
         /// Refresh with polling requests with respect to TTL in responses.
         ///
-        /// Will do polling request each interval.
+        /// Will do polling request each interval,
+        /// but not earlier than the cache expiration date parsed from the API response.
         case respectfulPolling(interval: TimeInterval)
 
         /// Update with Server Side Events.
@@ -30,7 +31,7 @@ extension GrowthBookInstance {
 
         // MARK: Public
 
-        /// Default poling policy: `.respectfulPolling`.
+        /// Default poling policy: `.respectfulPolling(interval: 3600.0)` (1 hour refresh rate).
         public static let `default`: Self = .respectfulPolling(interval: 60.0 * 60.0)
 
     }

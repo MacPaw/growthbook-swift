@@ -113,11 +113,28 @@ import Foundation
     public var forcedVariations: JSON?
     public var forcedFeatureValues: JSON?
 
-    init(attributes: JSON, stickyBucketAssignmentDocs: [String : StickyAssignmentsDocument]? = nil, forcedVariations: JSON? = nil, forcedFeatureValues: JSON? = nil) {
+    init(
+        attributes: JSON,
+        stickyBucketAssignmentDocs: [String : StickyAssignmentsDocument]? = nil,
+        forcedVariations: JSON? = nil,
+        forcedFeatureValues: JSON? = nil
+    )
+    {
         self.attributes = attributes
         self.stickyBucketAssignmentDocs = stickyBucketAssignmentDocs
         self.forcedVariations = forcedVariations
         self.forcedFeatureValues = forcedFeatureValues
+    }
+
+    public override var description: String {
+        return """
+        UserContext(
+          attributes: \(attributes),
+          stickyBucketAssignmentDocs: \(String(describing: stickyBucketAssignmentDocs)),
+          forcedVariations: \(String(describing: forcedVariations)),
+          forcedFeatureValues: \(String(describing: forcedFeatureValues))
+        )
+        """
     }
 }
 
@@ -131,11 +148,11 @@ import Foundation
     }
 }
 
-@objc public class EvalContext : NSObject {
+public struct EvalContext {
     public var globalContext: GlobalContext
-    public  var userContext: UserContext
-    public  var stackContext: StackContext
-    public  var options: MultiUserOptions
+    public var userContext: UserContext
+    public var stackContext: StackContext
+    public var options: MultiUserOptions
 
     init(globalContext: GlobalContext, userContext: UserContext, stackContext: StackContext, options: MultiUserOptions) {
         self.globalContext = globalContext

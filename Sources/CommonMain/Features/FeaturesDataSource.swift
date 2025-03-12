@@ -3,7 +3,7 @@ import Foundation
 
 /// DataSource for Feature API
 class FeaturesDataSource {
-    let dispatcher: NetworkProtocol
+    let dispatcher: GrowthBookNetworkProtocol
     private let payloadType: GrowthBookInstance.PayloadType
     private let featuresURL: URL
     private let remoteEvaluatedFeaturesURL: URL
@@ -16,7 +16,7 @@ class FeaturesDataSource {
         remoteEvaluatedFeaturesURL: URL,
         remoteEvaluationParameters: RemoteEvalParams?,
         encryptionKey: String? = nil,
-        dispatcher: NetworkProtocol = CoreNetworkClient(),
+        dispatcher: GrowthBookNetworkProtocol = GrowthBookNetworkClient(),
         featuresResponseDecryptor: FeaturesResponseDecryptorInterface
     )
     {

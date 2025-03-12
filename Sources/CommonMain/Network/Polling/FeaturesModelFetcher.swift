@@ -21,7 +21,7 @@ struct FeaturesModelFetcher: Sendable {
     private let featuresURL: URL
     private let remoteEvaluatedFeaturesURL: URL
     private let remoteEvaluationParameters: RemoteEvalParams?
-    private let networkDispatcher: NetworkProtocol
+    private let networkDispatcher: GrowthBookNetworkProtocol
     private let featuresDataParser: FeaturesDataParserInterface
 
     init(
@@ -29,7 +29,7 @@ struct FeaturesModelFetcher: Sendable {
         featuresURL: URL,
         remoteEvaluatedFeaturesURL: URL,
         remoteEvaluationParameters: RemoteEvalParams?,
-        networkDispatcher: NetworkProtocol = CoreNetworkClient(),
+        networkDispatcher: GrowthBookNetworkProtocol,
         featuresDataParser: FeaturesDataParserInterface
     )
     {

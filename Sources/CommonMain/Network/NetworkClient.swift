@@ -8,12 +8,12 @@ public struct GrowthBookNetworkResponse: Sendable {
 /// Network Dispatcher Protocol for API Consumption
 ///
 /// Implement this protocol to define specific implementation for Network Calls - to be made by SDK
-public protocol NetworkProtocol: AnyObject, Sendable {
+public protocol GrowthBookNetworkProtocol: AnyObject, Sendable {
     func consumeRequest(urlRequest: URLRequest, completion: @escaping @Sendable (Result<GrowthBookNetworkResponse, Swift.Error>) -> Void)
 }
 
 
-public final class CoreNetworkClient: NetworkProtocol {
+public final class GrowthBookNetworkClient: GrowthBookNetworkProtocol {
 
     private let urlSession: URLSession
 
@@ -47,7 +47,7 @@ public final class CoreNetworkClient: NetworkProtocol {
 
 }
 
-extension CoreNetworkClient {
+extension GrowthBookNetworkClient {
     struct ResponseError: Swift.Error, Sendable {
         enum ErrorType: Sendable {
             case urlRequestError(Swift.Error)

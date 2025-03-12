@@ -7,7 +7,6 @@ protocol FeaturesFlowDelegate: AnyObject {
     func featuresFetchFailed(error: Error, fetchType: GrowthBookFeaturesFetchResult.FetchType)
 }
 
-
 /// View Model for Features
 final class FeaturesViewModel: Sendable {
     private class MutableState {
