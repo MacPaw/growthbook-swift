@@ -91,7 +91,7 @@ final class CrossPlatformTimer: Sendable {
             0.0
         )
 
-        print("Scheduling timer in \(leftTimeInterval) seconds")
+        logger.trace("Scheduling timer in \(leftTimeInterval) seconds")
 
         timer.schedule(deadline: .now() + leftTimeInterval, repeating: timerInterval)
 

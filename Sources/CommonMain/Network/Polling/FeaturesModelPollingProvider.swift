@@ -56,14 +56,17 @@ final class FeaturesModelPollingProvider {
     }
 
     private func fetchFeatures() {
+        logger.debug("Fetching features...")
         featuresModelFetcher.fetchFeatures { [weak self] result in
             guard let self, let delegate = self.delegate else { return }
 
             switch result {
             case let .success(response):
+                logger.debug("Successfully fetched features")
                 delegate.featuresProvider(self, didUpdate: response.decryptedFeaturesDataModel)
                 self.handleFeaturesResponseStaleInSeconds(response.expiresInSeconds)
             case let .failure(error):
+                logger.error("Failed to fetch features: \(error)")
                 delegate.featuresProvider(self, didFailToUpdate: error)
             }
         }

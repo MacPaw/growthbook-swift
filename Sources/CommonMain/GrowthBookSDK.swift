@@ -211,7 +211,7 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
             refreshPolicy: growthBookBuilderModel.instance.refreshPolicy
         )
 
-        return GrowthBookSDK(instance: instance, context: gbContext, featuresFetchResultHandler: featuresFetchResultHandler, networkDispatcher: networkDispatcher, cachingManager: cachingManager)
+        return GrowthBookSDK(instance: instance, context: gbContext, featuresFetchResultHandler: featuresFetchResultHandler, logLevel: growthBookBuilderModel.logLevel, networkDispatcher: networkDispatcher, cachingManager: cachingManager)
     }
 }
 
@@ -239,6 +239,8 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
         cachingManager: GrowthBookSDKCachingManagerInterface
     )
     {
+        logger.minLevel = logLevel
+
         gbContext = context
         self.featuresFetchResultHandler = featuresFetchResultHandler
         self.cachingManager = cachingManager
@@ -299,7 +301,6 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
 
 
         // Logger setup. if we have logHandler we have to re-initialise logger
-        logger.minLevel = logLevel
 
         refreshStickyBucketService()
     }
