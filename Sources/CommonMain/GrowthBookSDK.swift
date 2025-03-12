@@ -180,7 +180,7 @@ public struct GrowthBookCacheOptions: Sendable, Equatable {
             forcedVariations: growthBookBuilderModel.forcedVariations,
             stickyBucketService: growthBookBuilderModel.stickyBucketService,
             isQaMode: growthBookBuilderModel.isQaMode,
-            trackingClosure: growthBookBuilderModel.trackingClosure,
+            trackingClosure: growthBookBuilderModel.trackingClosure
         )
 
         let hashedClientKey: String = CachingManager.keyHash(growthBookBuilderModel.instance.clientKey)
