@@ -69,15 +69,22 @@ extension FeaturesModelFetcher: FeaturesModelFetcherInterface {
             return callback(.failure(error))
         }
 
+        logger.debug("Fetching features...")
         networkDispatcher.consumeRequest(urlRequest: urlRequest) { [featuresDataParser] result in
-            callback(
-                result.tryMap { response in
-                     .init(
-                        decryptedFeaturesDataModel: try featuresDataParser.parseFeaturesData(response.data),
-                        expiresInSeconds: response.httpURLResponse.responseExpiresIn()
-                    )
-                }
-            )
+            let result: Result<FeaturesModelResponse, Error> = result.tryMap { response in
+                .init(
+                    decryptedFeaturesDataModel: try featuresDataParser.parseFeaturesData(response.data),
+                    expiresInSeconds: response.httpURLResponse.responseExpiresIn()
+                )
+            }
+
+            switch result {
+            case .success:
+                logger.debug("Successfully fetched features.")
+            case let .failure(error):
+                logger.error("Failed to fetch features: \(error).")
+            }
+            callback(result)
         }
     }
 }
@@ -107,19 +114,19 @@ extension Result {
 }
 
 extension HTTPURLResponse {
+    fileprivate func responseExpiresIn() -> Int {
+        let expiresIn = (sMaxAgeHeaderValue() ?? maxAgeHeaderValue()) - ageHeaderValue()
+        guard expiresIn == 0 else { return expiresIn }
+
+        return Int(expiresHeaderValue()?.timeIntervalSinceNow ?? 0.0)
+    }
+
     private func _value(forHTTPHeaderField: String) -> String? {
         if #available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, visionOS 1.0, *) {
             value(forHTTPHeaderField: "Age")
         } else {
             allHeaderFields["Age"] as? String
         }
-    }
-    
-    fileprivate func responseExpiresIn() -> Int {
-        let expiresIn = (sMaxAgeHeaderValue() ?? maxAgeHeaderValue()) - ageHeaderValue()
-        guard expiresIn == 0 else { return expiresIn }
-
-        return Int(expiresHeaderValue()?.timeIntervalSinceNow ?? 0.0)
     }
 
     private func ageHeaderValue() -> Int {

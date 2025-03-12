@@ -56,7 +56,6 @@ final class FeaturesModelPollingProvider {
     }
 
     private func fetchFeatures() {
-        logger.debug("Fetching features...")
         featuresModelFetcher.fetchFeatures { [weak self] result in
             guard let self, let delegate = self.delegate else { return }
 
