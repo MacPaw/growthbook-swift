@@ -34,15 +34,9 @@ final class SystemStateObserverForTimer: SystemStateObserverForTimerInterface, S
     var canScheduleTimer: Bool { mutableState.read(\.canScheduleTimer) }
 
     static func isSystemReadyForTimerSetup() -> Bool {
-        let idleSleepAssertion: UnsafeMutablePointer<IOPMAssertionID> = .allocate(capacity: 1)
-        defer { idleSleepAssertion.deinitialize(count: 1) }
-        let sleepStatus = IOPMAssertionCreateWithName(kIOPMAssertionTypeNoIdleSleep as CFString, IOPMAssertionLevel(kIOPMAssertionLevelOn), "Check if system is asleep" as CFString, idleSleepAssertion)
-
-        if sleepStatus == kIOReturnSuccess {
-            return false // System is not asleep
-        } else {
-            return true // System is asleep
-        }
+        // Assume that the system is ready for timer setup by default.
+        // The timer will be re-scheduled when the system wakes up, if the system is currently asleep.
+        true
     }
 
     init(notificationCenter: NotificationCenter = NSWorkspace.shared.notificationCenter) {
